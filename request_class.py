@@ -3,11 +3,11 @@ import socket
 from file_server import iter_lines
 
 
-class Request:
+class Request(typing.NamedTuple):
 
-    method = None
-    path = None
-    headers = None
+    method: str
+    path: str
+    headers: typing.Mapping[str, str]
 
     @classmethod
     def from_socket(cls, sock:socket.socket):
