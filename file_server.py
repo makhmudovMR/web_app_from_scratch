@@ -1,6 +1,12 @@
+'''
+Разделяем целый запрос на строки и из этих строк состовляет список
+'''
+
 import typing
-# must have documentation
-def iter_lines(sock, bufsize=1024):
+import socket
+
+
+def iter_lines(sock: socket.socket, bufsize: int = 16_384) -> typing.Generator[bytes, None, bytes]:
     """Given a socket, read all the individual CRLF-separated lines
     and yield each one until an empty one is found.  Returns the
     remainder after the empty line.
@@ -12,7 +18,6 @@ def iter_lines(sock, bufsize=1024):
             return b""
 
         buff += data
-        print(buff)
         while True:
             try:
                 i = buff.index(b"\r\n")
