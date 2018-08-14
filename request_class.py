@@ -3,11 +3,12 @@ import socket
 from service import iter_lines
 
 
-class Request(typing.NamedTuple):
+class Request:
 
-    method: str
-    path: str
-    headers: typing.Mapping[str]
+    def __init__(self, *args, **kwargs):
+        self.method = kwargs['method']
+        self.path = kwargs['path']
+        self.headers = kwargs['headers']
 
     @classmethod
     def from_socket(cls, sock: socket.socket) -> "Request":
@@ -29,7 +30,7 @@ class Request(typing.NamedTuple):
 
         for line in lines:
             try:
-                name, _, value = line.decode("ascii").partition()
+                name, _, value = line.decode("ascii").partition(":")
                 headers[name.lower()] = value.lstrip()
             except ValueError:
                 raise ValueError(f"Недопустимая строка заголовка {line}")

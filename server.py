@@ -1,17 +1,12 @@
 import socket
 import service
+from request_class import Request
+from responses import *
 
 
 HOST = "127.0.0.1"
 PORT = 9000
 
-
-RESPONSE = b"""\
-HTTP/1.1 200 OK
-Content-type: text/html
-Content-length: 15
-
-<h1>Hello!</h1>""".replace(b"\n", b"\r\n")
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
     server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -30,6 +25,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
         client_sock, client_addr = server_sock.accept()
         print(f"New connection from {client_addr}.")
         with client_sock:
-            for request_line in service.iter_lines(client_sock):
-                print(request_line)
-            client_sock.sendall(RESPONSE)
+            try:
+                request = Request.from_socket(client_sock)
+                print(request)
+                client_sock.sendall(NOT_FOUND_RESPONSE)
+            except Exception as e:
+                print(f"Failed to parse request: {e}")
+                client_sock.sendall(BAD_REQUEST_RESPONSE)
