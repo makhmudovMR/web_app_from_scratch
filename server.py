@@ -1,7 +1,7 @@
 import socket
-import service
 from request_class import Request
 from responses import *
+from somefile1 import serve_file
 
 
 HOST = "127.0.0.1"
@@ -27,8 +27,10 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
         with client_sock:
             try:
                 request = Request.from_socket(client_sock)
-                print(request)
-                client_sock.sendall(NOT_FOUND_RESPONSE)
+                if request.method != "GET":
+                    client_sock.sendall(METHOD_NOT_ALLOWED_RESPONSE)
+                    continue
+                serve_file(client_sock, request.path)
             except Exception as e:
-                print(f"Failed to parse request: {e}")
+                print(f"Faidled for parse request: {e}")
                 client_sock.sendall(BAD_REQUEST_RESPONSE)
