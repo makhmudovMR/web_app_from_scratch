@@ -1,7 +1,7 @@
 import typing
 from collections import defaultdict
 
-
+'''??????????????????????'''
 class Headers:
 
     def __init__(self) -> None:
@@ -19,6 +19,10 @@ class Headers:
         except:
             return default
 
+    def __iter__(self):
+        for name, values in self._headers.items():
+            for value in values:
+                yield name, value
 
 # header = Headers()
 # header.add('height', '185')

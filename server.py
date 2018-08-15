@@ -1,7 +1,10 @@
 import socket
+import os
 from request import Request
 from responses import *
 from somefile1 import serve_file
+from headers import Headers
+from response import Response
 
 
 HOST = "127.0.0.1"
@@ -28,6 +31,11 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
             try:
                 request = Request.from_socket(client_sock)
 
+                '''for cURL utility'''
+                if '100-continue' in request.headers.get("except", ""):
+                    response = Response('100-continue')
+                    response.send(client_sock)
+
                 try:
                     content_length = int(request.headers.get('content-length', '0'))
                 except ValueError:
@@ -45,3 +53,5 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
             except Exception as e:
                 print(f"Faidled for parse request: {e}")
                 client_sock.sendall(BAD_REQUEST_RESPONSE)
+
+
