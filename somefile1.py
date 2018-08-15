@@ -11,11 +11,10 @@ import socket
 import typing
 from responses import *
 
+
 # we get this: (C:\python_projects\web_app_from_scratch\www)
-SERVER_ROOT = os.path.abspath("www") # ?
+SERVER_ROOT = os.path.abspath("www") # add to abstract path www
 print('this is server root:', SERVER_ROOT)
-
-
 
 
 def serve_file(sock: socket.socket, path: str) -> None:

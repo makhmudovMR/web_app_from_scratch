@@ -1,5 +1,5 @@
 import socket
-from request_class import Request
+from request import Request
 from responses import *
 from somefile1 import serve_file
 
@@ -27,9 +27,20 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_sock:
         with client_sock:
             try:
                 request = Request.from_socket(client_sock)
+
+                try:
+                    content_length = int(request.headers.get('content-length', '0'))
+                except ValueError:
+                    content_length = 0
+
+                if content_length:
+                    body=request.body.read(content_length)
+                    print("Request body", body)
+
                 if request.method != "GET":
                     client_sock.sendall(METHOD_NOT_ALLOWED_RESPONSE)
                     continue
+
                 serve_file(client_sock, request.path)
             except Exception as e:
                 print(f"Faidled for parse request: {e}")
