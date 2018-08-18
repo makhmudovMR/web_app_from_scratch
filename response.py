@@ -8,7 +8,14 @@ from headers import Headers
 
 class Response:
 
-    def __init__(self, status, headers, body, content, encoding = "utf-8"):
+    def __init__(
+            self,
+            status: str,
+            headers: typing.Optional[Headers] = None,
+            body: typing.Optional[typing.IO] = None,
+            content: typing.Optional[str] = None,
+            encoding: str = "utf-8"
+    ) -> None:
         self.status = status.encode()
         self.headers = headers or Headers()
         if content is not None:

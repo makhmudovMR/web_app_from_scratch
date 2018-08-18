@@ -54,9 +54,10 @@ class HTTPWorker(Thread):
     """
     Поток который принимает соединение и обрабатывает его
     """
-    def __init__(self, connection_queue):
+    def __init__(self, connection_queue, handlers):
         super().__init__(daemon=True)
 
+        self.handlers = handlers
         self.connection_queue = connection_queue
         self.running = False
 
@@ -67,7 +68,7 @@ class HTTPWorker(Thread):
         self.running = True
         while self.running:
             try:
-                client_sock, client_addr = self.connection_queue.queue(timeout=1)
+                client_sock, client_addr = self.connection_queue.get(timeout=1)
             except Empty:
                 continue
 
@@ -79,6 +80,36 @@ class HTTPWorker(Thread):
             finally:
                 self.connection_queue.task_done()
 
+    def handle_client(self, client_sock, client_addr):
+        with client_sock:
+            try:
+                request = Request.from_socket(client_sock)
+            except Exception:
+                response = Response(status="400 Bad Request", content="Bad Request")
+                response.send(client_sock)
+                return
+
+            if "100-continue" in request.headers.get("expect", ""):
+                response = Response(status="100 Continue")
+                response.send(client_sock)
+
+            for path_prefix, handler in self.handlers:
+                if request.path.startswith(path_prefix):
+                    try:
+                        request = request._replace(path=request.path[len(path_prefix):])
+                        response = handler(request)
+                        response.send(client_sock)
+                    except Exception as e:
+                        response = Response(status="500 Internal Server Error", content="Internal Error")
+                        response.send(client_sock)
+                    finally:
+                        break
+            else:
+                response = Response(status="404 Not Found", content="Not Found")
+                response.send(client_sock)
+
+
+    """
     def handle_client(self, client_sock, client_addr):
         with client_sock:
             try:
@@ -106,21 +137,26 @@ class HTTPWorker(Thread):
                 print(f"Failed to parse request: {e}")
                 response = Response(status="400 Bad Request", content="Bad Request")
                 response.send(client_sock)
+    """
 
 
 class HTTPServer:
 
     def __init__(self, host="127.0.0.1", port=9000, worker_count=16):
+        self.handlers = []
         self.host = host
         self.port = port
         self.worker_count = worker_count
         self.worker_backlog = worker_count * 8 # очередь слушателей server_sock.lisnet()
         self.connection_queue = Queue(self.worker_backlog)
 
+    def mount(self, path_prefix, handler):
+        self.handlers.append((path_prefix, handler))
+
     def serve_forever(self):
         workers = []
         for _ in range(self.worker_count):
-            worker = HTTPServer(self.worker_count)
+            worker = HTTPWorker(self.connection_queue, self.handlers)
             worker.start()
             workers.append(worker)
 
@@ -145,5 +181,10 @@ class HTTPServer:
                 worker.join(timeout=30)
 
 
+def app(request):
+    return Response(status="200 OK", content="Hello!")
+
+
 server = HTTPServer()
+server.mount("", app)
 server.serve_forever()
