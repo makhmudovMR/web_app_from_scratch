@@ -1,39 +1,16 @@
-import socket
-import os
 import io
+import os
+import socket
 import typing
+
 from headers import Headers
-
-
-'''This is just test class'''
 
 
 class Response:
 
-
-    """An HTTP response.
-
-    Parameters:
-      status: The resposne status line (eg. "200 OK").
-      headers: The response headers.
-      body: A file containing the response body.
-      content: A string representing the response body.  If this is
-        provided, then body is ignored.
-      encoding: An encoding for the content, if provided.
-    """
-
-    def __init__(
-            self,
-            status: str,
-            headers: typing.Optional[Headers] = None,
-            body: typing.Optional[typing.IO] = None,
-            content: typing.Optional[str] = None,
-            encoding: str = "utf-8"
-    ) -> None:
-
+    def __init__(self, status, headers, body, content, encoding = "utf-8"):
         self.status = status.encode()
         self.headers = headers or Headers()
-
         if content is not None:
             self.body = io.BytesIO(content.encode(encoding))
         elif body is None:
@@ -41,19 +18,19 @@ class Response:
         else:
             self.body = body
 
-
-    def send(self, sock: socket.socket) -> None:
-        """Write this response to a socket.
-        """
+    def send(self, sock):
         content_length = self.headers.get("content-length")
+
         if content_length is None:
             try:
                 body_stat = os.fstat(self.body.fileno())
                 content_length = body_stat.st_size
-            except OSError:
+            except:
+                """?"""
                 self.body.seek(0, os.SEEK_END)
                 content_length = self.body.tell()
                 self.body.seek(0, os.SEEK_SET)
+                """?"""
 
             if content_length > 0:
                 self.headers.add("content-length", content_length)
