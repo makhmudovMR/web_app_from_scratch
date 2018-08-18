@@ -1,20 +1,17 @@
 import io
-import socket
 
 
-'''???'''
 class BodyReader(io.IOBase):
 
-    def __init__(self, sock: socket.socket, *, buff: bytes = b"", bufsize: int = 16_384) -> None:
+    def __init__(self, sock, buff, bufsize):
         self._sock = sock
         self._buff = buff
         self._bufsize = bufsize
 
-    def readable(self) -> bool:
+    def readable(self):
         return True
 
-    def read(self, n: int) -> bytes:
-        '''Просто читает контент заголовка (тело заголовка)'''
+    def read(self, n):
         while len(self._buff) < n:
             data = self._sock.recv(self._bufsize)
             if not data:

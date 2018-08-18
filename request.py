@@ -1,35 +1,49 @@
-import io
 import typing
 import socket
 from headers import Headers
 from bodyreader import BodyReader
 
 
+def iter_lines(sock, bufsize):
+    buff = b""
+    while True:
+        data = sock.recv(bufsize)
+        if not data:
+            break
 
-'''Класс который олицетворяет собой запрос(HTTP запрос)'''
-class Request:
+        buff += data
+        while True:
+            try:
+                i = buff.index(b"\r\n")
+                line, buff = buff[:i], buff[i+2:]
+                if not line:
+                    return buff
 
-    def __init__(self, *args, **kwargs):
-        self.method = kwargs['method']
-        self.path = kwargs['path']
-        self.headers = kwargs['headers']
-        self.body = kwargs['body']
+                yield line
+            except IndexError:
+                break
+
+
+class Request(typing.NamedTuple):
+
+    method:str
+    path:str
+    headers:Headers
+    body:BodyReader
 
     @classmethod
-    def from_socket(cls, sock: socket.socket) -> "Request":
+    def from_socket(cls, sock: socket.socket):
         lines = iter_lines(sock)
 
         try:
             request_line = next(lines).decode("ascii")
         except StopIteration:
-            raise ValueError("Отсутствует строка запроса")
-
+            raise ValueError("Request line missing")
 
         try:
-            method, path, _ = request_line.split(" ") # первая строка http заголовка example (GET HTTP/1.1 ....)
+            method, path, _ = request_line.split(" ")
         except ValueError:
-            raise ValueError(f"Недопустимая строка  {request_line}")
-
+            raise ValueError(f"Malformed request line {request_line!r}.")
 
         headers = Headers()
         buff = b""
@@ -38,7 +52,6 @@ class Request:
             try:
                 line = next(lines)
             except StopIteration as e:
-                # StopIteration.value contains the return value of the generator.
                 buff = e.value
                 break
 
@@ -46,33 +59,7 @@ class Request:
                 name, _, value = line.decode("ascii").partition(":")
                 headers.add(name, value.lstrip())
             except ValueError:
-                raise ValueError(f"Malformed header line {line!r}.")
+                raise ValueError(f"Malformed headers line {line!r}.")
 
         body = BodyReader(sock, buff=buff)
         return cls(method=method.upper(), path=path, headers=headers, body=body)
-
-
-
-'''Эта функция возвращает итератор со строками HTTP запроса'''
-
-
-def iter_lines(sock, buff_size=1024):
-    buff = b""
-    while True:
-        data = sock.recv(buff_size)
-        if not data:
-            return b""
-
-        buff += data
-
-        while True:
-            try:
-                i = buff.index(b"\r\n")
-                line, buff = buff[:i], buff[i+2:]
-
-                if not line:
-                    return buff
-
-                yield line
-            except IndexError:
-                break
